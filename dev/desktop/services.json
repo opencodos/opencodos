@@ -1,0 +1,26 @@
+{
+  "enabledServices": [
+    "connector-backend",
+    "telegram-agent-api",
+    "atlas-bot",
+    "telegram-mcp-server"
+  ],
+  "autostartServices": [
+    "connector-backend",
+    "telegram-agent-api"
+  ],
+  "restartPolicies": {
+    "connector-backend": {
+      "enabled": true
+    },
+    "telegram-agent-api": {
+      "enabled": true
+    },
+    "atlas-bot": {
+      "enabled": false
+    },
+    "telegram-mcp-server": {
+      "enabled": false
+    }
+  }
+}

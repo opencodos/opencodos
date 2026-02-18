@@ -1,0 +1,19 @@
+{
+  "repo": "owner/cloudbot",
+  "branch": "main",
+  "enabled": false,
+  "checkInterval": 30,
+  "autoApply": false,
+  "notifyTelegram": true,
+  "lastChecked": null,
+  "_comment": "Configuration for Cloudbot repository monitor",
+  "_instructions": {
+    "repo": "GitHub repository in format 'owner/repo' (e.g., 'anthropics/cloudbot')",
+    "branch": "Branch to monitor (default: 'main')",
+    "enabled": "Set to true to enable monitoring. MUST be enabled manually after setup.",
+    "checkInterval": "How often to check for new commits (in minutes). Used for cron scheduling.",
+    "autoApply": "WARNING: If true, will attempt to automatically apply changes. Keep false for safety.",
+    "notifyTelegram": "If true, send notifications when new commits are detected",
+    "lastChecked": "Automatically updated. Last time the monitor ran."
+  }
+}

@@ -1,0 +1,3 @@
+# Personal workflows (keep _template.yaml as example)
+workflows/*.yaml
+!workflows/_template.yaml

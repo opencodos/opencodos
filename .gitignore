@@ -1,0 +1,74 @@
+# Personal vault data
+vault/
+
+# Personal contact lists (use priority_contacts.example.yaml as template)
+src/backend/telegram_agent/priority_contacts.yaml
+
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+secrets.env
+*.pem
+*.key
+
+# Logs
+*.log
+dev/Logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Telegram session files
+*.session
+*.session-journal
+conversations_list.json
+
+# Database files
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Personal skills (not shared)
+skills/Sales Deck/
+
+# Personal scheduled workflows (keep template only)
+skills/Scheduled Workflows/workflows/*.yaml
+skills/Scheduled Workflows/workflows/*.yml
+!skills/Scheduled Workflows/workflows/_template.yaml
+
+# Operational data with PII
+dev/Ops/atlas/briefed-items.json
+dev/Ops/atlas/pending-alerts.json
+src/backend/atlas_bot/sessions.json
+src/backend/telegram_agent/login_qr.png
+ingestion/Slack/config.yaml
+
+# Additional ignores
+dist/
+.env.local
+logs/
+*.log
+*.woff2
+*.egg-info/
+WIP/
+uv.lock
+.python-version

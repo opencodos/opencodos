@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "composio-github": {
+      "type": "http",
+      "url": "https://mcp.composio.dev/partner/composio/github/mcp?customerId=${COMPOSIO_CUSTOMER_ID}&entityId=${COMPOSIO_ENTITY_ID}"
+    }
+  }
+}

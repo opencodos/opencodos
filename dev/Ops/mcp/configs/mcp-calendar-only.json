@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "composio-calendar": {
+      "type": "http",
+      "url": "https://mcp.composio.dev/partner/composio/googlecalendar/mcp?customerId=${COMPOSIO_CUSTOMER_ID}&entityId=${COMPOSIO_ENTITY_ID}"
+    }
+  }
+}

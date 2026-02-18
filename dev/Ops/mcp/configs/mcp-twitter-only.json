@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "twitter": {
+      "command": "python",
+      "args": ["${CODOS_PATH}/dev/Ops/mcp/bird-mcp/main.py"]
+    }
+  }
+}

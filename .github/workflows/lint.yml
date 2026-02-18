@@ -1,0 +1,55 @@
+name: Lint & Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-everything:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+  test-typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: cd ingestion/Granola && bun install
+
+      - name: Run TypeScript tests
+        run: bun test ingestion/lib/
+
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --extra test
+
+      - name: Run Python tests
+        run: uv run pytest src/backend/

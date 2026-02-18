@@ -1,0 +1,16 @@
+[project]
+name = "atlas-bot"
+version = "0.1.0"
+description = "Atlas Telegram bot"
+requires-python = ">=3.11"
+dependencies = [
+    "python-telegram-bot>=21.0",
+    "python-dotenv>=1.0.0",
+    "assemblyai>=0.49.0",
+    "anthropic>=0.77.0",
+    "loguru>=0.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
