@@ -1,0 +1,8 @@
+sync:
+  sync_unread_only: true
+  include_dms: true
+  include_groups: true
+  include_channels: false
+  include_muted: false
+  include_archived: false
+  mark_unread_after_sync: false

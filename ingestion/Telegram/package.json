@@ -1,0 +1,12 @@
+{
+  "name": "telegram-processor",
+  "version": "1.0.0",
+  "description": "Process Telegram Daily Summary files for CRM updates",
+  "type": "module",
+  "scripts": {
+    "process": "bun run process-telegram-actions.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

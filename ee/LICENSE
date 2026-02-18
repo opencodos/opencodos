@@ -1,0 +1,37 @@
+Codos Enterprise Edition (EE) License
+
+Copyright (c) 2025-present Codos. All rights reserved.
+
+With regard to the Codos Software:
+
+This software and associated documentation files (the "Software") may
+only be used in production if you (and any entity that you represent)
+have agreed to, and are in compliance with, the Codos Subscription
+Terms available at https://codos.ai/terms (the "Enterprise Terms"), or
+other agreements governing the use of the Software, as agreed by you
+and Codos, and otherwise have a valid Codos Enterprise subscription
+for the correct number of user seats. Subject to the foregoing sentence,
+you are free to modify this Software and publish patches to the Software.
+Codos and its licensors reserve all rights, title, and interest in and
+to all modifications and patches you create of the Software.
+
+Notwithstanding the foregoing, you may copy and modify the Software for
+development and testing purposes without requiring a subscription. You
+agree that Codos and its licensors retain all right, title, and interest
+in and to all such modifications. You are not granted any other rights
+beyond what is expressly stated herein. Subject to the foregoing, it is
+forbidden to copy, merge, publish, distribute, sublicense, and/or sell
+the Software.
+
+For clarity, the foregoing license applies only to the portions of the
+Software that are not distributed under an open-source license such as
+AGPLv3. Any open-source licensed portions of the Software remain governed
+by their respective licenses.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.

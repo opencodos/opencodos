@@ -1,0 +1,6 @@
+{
+  "name": "notion-sync",
+  "scripts": {
+    "start": "bun run notion-sync.ts"
+  }
+}

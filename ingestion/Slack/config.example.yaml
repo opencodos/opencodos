@@ -1,0 +1,11 @@
+# Slack ingestion config
+# Copy this file to config.yaml and fill in your Slack workspace details.
+
+channels:
+  - C000000000  # general
+  - C000000001  # engineering
+  - C000000002  # random
+
+keywords: []
+
+team_id: T000000000

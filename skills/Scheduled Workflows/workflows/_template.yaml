@@ -1,0 +1,29 @@
+name: Example Workflow
+
+description: Replace with a short description.
+
+schedule:
+  type: daily            # daily | weekly | cron | interval | manual
+  time: "02:00"           # HH:MM (required for daily/weekly)
+  day: sunday            # required for weekly
+  # cron: "0 2 * * *"     # minute hour day month weekday
+  # interval_minutes: 60  # for interval schedules
+
+context:
+  - type: file
+    path: "Vault/3 - Todos/Research List.md"
+    title: Research List
+    max_chars: 12000
+
+prompt: |
+  Write your workflow instructions here.
+  Use the context below to make decisions and produce output.
+
+output:
+  path: "Vault/3 - Todos/Workflow Outputs/{DATE}.md"
+  overwrite: false
+
+runner:
+  model: opus
+  timeout_sec: 1200
+  unset_api_key: true

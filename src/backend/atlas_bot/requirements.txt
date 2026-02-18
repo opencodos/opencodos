@@ -1,0 +1,5 @@
+python-telegram-bot>=21.0
+python-dotenv>=1.0.0
+assemblyai>=0.49.0
+anthropic>=0.77.0
+loguru>=0.7.0
