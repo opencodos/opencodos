@@ -1,0 +1,53 @@
+name: Linear Ingestion
+description: Fetch recent Linear issues via Official Linear MCP and save to Vault
+schedule:
+  type: daily
+  time: "08:00"
+context:
+  - type: text
+    title: Output Format
+    text: |
+      Save files to this directory using the Write tool:
+      - Linear: {VAULT_PATH}/1 - Inbox (Last 7 days)/Linear/
+prompt: |
+  You are a data ingestion worker. Fetch recent Linear issues and save them as a daily markdown file.
+
+  ## Instructions
+  1. Use Linear MCP tools to list issues updated in the last 24 hours (limit 30, ordered by updatedAt)
+  2. Group issues by status: Pending Release, In Review, In Progress, Todo, Backlog, Done, Canceled
+  3. Write ONE markdown file for the day
+
+  ## File naming
+  - `{YYYY-MM-DD}.md`
+
+  ## File template (follow EXACTLY)
+
+  # Linear Updates — {YYYY-MM-DD}
+
+  > {N} issues updated in last 24 hours
+
+  ## {Status} ({count})
+
+  | Issue | Title | Assignee | Priority |
+  |-------|-------|----------|----------|
+  | [{ID}](url) | {title, max 60 chars} | {assignee or Unassigned} | {Urgent/High/Normal/Low/None} |
+
+  ---
+  *Fetched: {YYYY-MM-DD} {HH}:{MM} GMT+1 via Linear MCP*
+
+  ## Rules
+  - Priority mapping: 1=Urgent, 2=High, 3=Normal, 4=Low, 0=None
+  - Skip empty status groups
+  - Truncate titles at 60 chars
+  - Use display name for assignees, "Unassigned" if none
+  - Write the file with the Write tool
+  - If no issues found, still create file with "No issues updated in last 24 hours"
+output:
+  path: Vault/1 - Inbox (Last 7 days)/Linear/{DATE}.md
+  overwrite: true
+runner:
+  model: sonnet
+  timeout_sec: 300
+  unset_api_key: true
+  allowed_tools: "Read,Write,Bash(mkdir *),mcp__claude_ai_Linear__*"
+  permission_mode: bypassPermissions

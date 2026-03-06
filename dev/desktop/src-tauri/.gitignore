@@ -1,0 +1,12 @@
+target/
+resources/*
+!resources/.gitkeep
+!resources/python/
+!resources/bun/
+!resources/services/
+!resources/skills/
+resources/python/*
+resources/bun/*
+resources/services/*
+resources/skills/*
+!resources/**/.gitkeep

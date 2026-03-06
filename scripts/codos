@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# Codos CLI — manage Codos services
+set -euo pipefail
+
+# ── Resolve install directory ───────────────────────────────────────────────
+# If this script is a symlink, follow it to find the real repo location
+# Resolve symlinks portably (readlink -f / realpath missing on older macOS)
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+done
+CODOS_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+BOOTSTRAP="$CODOS_DIR/scripts/bootstrap.sh"
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+info()  { echo -e "${GREEN}==>${NC} $1"; }
+warn()  { echo -e "${YELLOW}WARNING:${NC} $1"; }
+error() { echo -e "${RED}ERROR:${NC} $1" >&2; }
+
+PORTS="8767 8768 5174"
+
+is_running() {
+  for port in $PORTS; do
+    if lsof -ti ":$port" >/dev/null 2>&1; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# ── Commands ────────────────────────────────────────────────────────────────
+cmd_start() {
+  local full=false
+  for arg in "$@"; do
+    case "$arg" in
+      --full) full=true ;;
+    esac
+  done
+
+  if [ "$full" = true ] || [ ! -d "$CODOS_DIR/backend/.venv" ]; then
+    info "Starting Codos (full setup)..."
+    exec bash "$BOOTSTRAP" --start
+  else
+    info "Starting Codos..."
+    exec bash "$BOOTSTRAP" --quick
+  fi
+}
+
+cmd_stop() {
+  info "Stopping Codos services..."
+  local found=false
+  for port in $PORTS; do
+    local pids
+    pids=$(lsof -ti ":$port" 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+      echo "  Killing process on port $port..."
+      echo "$pids" | xargs kill -9 2>/dev/null || true
+      found=true
+    fi
+  done
+  if [ "$found" = true ]; then
+    info "Services stopped."
+  else
+    info "No running services found."
+  fi
+}
+
+cmd_update() {
+  local REPO_TARBALL="https://github.com/opencodos/opencodos/archive/refs/heads/main.tar.gz"
+
+  info "Updating Codos..."
+
+  # Stop running services first
+  if is_running; then
+    cmd_stop
+  fi
+
+  # Download and extract via temp dir (avoids overwriting running script)
+  local TMP_TAR TMP_DIR
+  TMP_TAR=$(mktemp /tmp/codos-XXXXXX.tar.gz)
+  TMP_DIR=$(mktemp -d /tmp/codos-update-XXXXXX)
+  trap 'rm -rf "$TMP_TAR" "$TMP_DIR"' RETURN
+
+  info "Downloading latest version..."
+  curl -fsSL "$REPO_TARBALL" -o "$TMP_TAR" || { error "Download failed."; return 1; }
+
+  info "Extracting..."
+  tar xzf "$TMP_TAR" -C "$TMP_DIR" --strip-components=1
+  rm -f "$TMP_TAR"
+
+  info "Applying update to $CODOS_DIR..."
+  cp -R "$TMP_DIR"/. "$CODOS_DIR"/
+  rm -rf "$TMP_DIR"
+
+  # Re-run full bootstrap to pick up any new deps
+  info "Reinstalling dependencies..."
+  exec bash "$BOOTSTRAP" --start
+}
+
+cmd_status() {
+  echo "Codos services:"
+  for port in $PORTS; do
+    local name
+    case "$port" in
+      8767) name="Backend" ;;
+      8768) name="Telegram agent" ;;
+      5174) name="Frontend" ;;
+    esac
+    if lsof -ti ":$port" >/dev/null 2>&1; then
+      echo -e "  ${GREEN}●${NC} $name (port $port)"
+    else
+      echo -e "  ${RED}●${NC} $name (port $port)"
+    fi
+  done
+}
+
+cmd_help() {
+  cat <<EOF
+Codos — AI Operating System for Work
+
+Usage: codos [command] [options]
+
+Commands:
+  start          Start services (default)
+  start --full   Full setup: reinstall all dependencies
+  stop           Stop all services
+  update         Download latest version and restart
+  status         Check if services are running
+  help           Show this help
+
+Examples:
+  codos              Start services (quick mode)
+  codos start --full First-time or full reinstall
+  codos update       Pull latest + restart
+  codos stop         Stop everything
+EOF
+}
+
+# ── Main ────────────────────────────────────────────────────────────────────
+COMMAND="${1:-start}"
+shift 2>/dev/null || true
+
+case "$COMMAND" in
+  start)   cmd_start "$@" ;;
+  stop)    cmd_stop ;;
+  update)  cmd_update ;;
+  status)  cmd_status ;;
+  help|--help|-h) cmd_help ;;
+  *)
+    error "Unknown command: $COMMAND"
+    cmd_help
+    exit 1
+    ;;
+esac

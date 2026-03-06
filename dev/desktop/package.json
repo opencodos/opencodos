@@ -1,0 +1,26 @@
+{
+  "name": "codos-desktop",
+  "private": true,
+  "version": "1.3.1",
+  "type": "module",
+  "scripts": {
+    "dev": "PATH=\"$HOME/.cargo/bin:$PATH\" tauri dev",
+    "build": "PATH=\"$HOME/.cargo/bin:$PATH\" tauri build",
+    "bundle:python": "bash ./scripts/bundle-python.sh",
+    "bundle:bun": "bash ./scripts/bundle-bun.sh",
+    "bundle:ingestion": "bash ./scripts/bundle-ingestion.sh",
+    "bundle:all": "npm run bundle:python && npm run bundle:bun && npm run bundle:ingestion",
+    "bundle:clean": "rm -rf src-tauri/resources/python src-tauri/resources/bun src-tauri/resources/services src-tauri/resources/bundle-manifest.json",
+    "preflight:macos": "bash ./scripts/preflight-macos-release.sh",
+    "sync-version": "bash ../../scripts/sync-version.sh",
+    "build:macos": "npm run sync-version && npm run bundle:all && npm run preflight:macos && PATH=\"$HOME/.cargo/bin:$PATH\" tauri build && bash ./scripts/create-dmg.sh",
+    "build:macos:notarized": "npm run sync-version && npm run bundle:all && npm run preflight:macos && PATH=\"$HOME/.cargo/bin:$PATH\" tauri build && bash ./scripts/create-dmg.sh && bash ./scripts/notarize.sh",
+    "build:macos:debug": "npm run sync-version && npm run preflight:macos && PATH=\"$HOME/.cargo/bin:$PATH\" tauri build --debug"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^2.1.50"
+  }
+}
