@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "yaml": "^2.8.2"
+  }
+}

@@ -1,0 +1,52 @@
+name: Calendar Ingestion
+description: Fetch upcoming calendar events via Google Calendar MCP and save to Vault
+schedule:
+  type: cron
+  cron: "0 7 * * *"
+context:
+  - type: text
+    title: Output Directory
+    text: |
+      Save files using the Write tool to this directory:
+      {VAULT_PATH}/1 - Inbox (Last 7 days)/Calendar/
+prompt: |
+  You are a data ingestion worker. Fetch the next 7 days of calendar events and save as markdown files.
+
+  ## Instructions
+  1. Use `ToolSearch` for "calendar" to discover available Google Calendar MCP tools
+  2. Use the Calendar list_events tool for the next 7 days (all calendars)
+  3. Parse the output, group events by date
+  4. Write ONE file per day that has events
+
+  ## File naming
+  Each file: `YYYY-MM-DD.md` (e.g., `2026-02-20.md`)
+
+  ## File format (follow EXACTLY)
+
+  ```
+  # Calendar — YYYY-MM-DD (DayOfWeek)
+
+  > Fetched: YYYY-MM-DD HH:MM CET
+
+  | Time | Duration | Event | Attendees | Link |
+  |------|----------|-------|-----------|------|
+  | HH:MM-HH:MM | Xh Ym | Event title | Name1, Name2 | meet.google.com/... |
+  ```
+
+  ## Rules
+  - 24h time format, CET (Europe/Madrid)
+  - Convert all times to CET regardless of source timezone
+  - Show attendee display names, not email addresses
+  - If event has a Google Meet or Zoom link, include it in Link column
+  - If event is all-day, show "All day" in Time column
+  - Sort events by start time within each day
+  - Skip cancelled events (status: "cancelled")
+  - Use the Write tool to save each file
+output:
+  path: Vault/1 - Inbox (Last 7 days)/Calendar/{DATE} _marker.md
+  overwrite: true
+runner:
+  model: opus
+  timeout_sec: 300
+  allowed_tools: "Read,Write,ToolSearch,mcp__claude_ai_Google_Calendar__*"
+  permission_mode: bypassPermissions

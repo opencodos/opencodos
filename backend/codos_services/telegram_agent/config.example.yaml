@@ -1,0 +1,17 @@
+telegram:
+  api_id: 12345678
+  api_hash: "your_api_hash_here"
+
+anthropic:
+  api_key: ""  # Or set ANTHROPIC_API_KEY env var
+  model: "claude-sonnet-4-20250514"
+
+obsidian:
+  vault_path: "~/Documents/Obsidian Vault/Vault/1 - Inbox (Last 7 days)/Telegram"
+
+sync:
+  initial_lookback_days: 7
+
+# Conversations to sync - populated by 'python agent.py select'
+conversations:
+  selected: []

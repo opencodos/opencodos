@@ -1,0 +1,26 @@
+{
+  "enabledServices": [
+    "gateway-backend",
+    "telegram-agent-api",
+    "codos-bot",
+    "telegram-mcp-server"
+  ],
+  "autostartServices": [
+    "gateway-backend",
+    "telegram-agent-api"
+  ],
+  "restartPolicies": {
+    "gateway-backend": {
+      "enabled": true
+    },
+    "telegram-agent-api": {
+      "enabled": true
+    },
+    "codos-bot": {
+      "enabled": false
+    },
+    "telegram-mcp-server": {
+      "enabled": false
+    }
+  }
+}
