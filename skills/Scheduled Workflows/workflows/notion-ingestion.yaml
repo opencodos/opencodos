@@ -1,0 +1,106 @@
+name: Notion Ingestion
+description: Fetch recently edited Notion pages via claude.ai Notion MCP and save
+  to Vault
+schedule:
+  type: cron
+  cron: "5 8,14,20 * * *"
+context:
+- type: text
+  title: Output Format
+  text: 'Save files to: {VAULT_PATH}/1 - Inbox (Last 7 days)/Notion/
+
+    '
+prompt: 'You are a data ingestion worker. Fetch recently edited Notion pages and save
+  them as markdown files.
+
+
+  ## Instructions
+
+
+  ### Step 1: Search for recent pages
+
+  Use `notion-search` with query " " (a single space). This returns the most recently
+  edited pages.
+
+  Skip results of type "database" — only process actual pages.
+
+
+  ### Step 2: Fetch and write each page
+
+  For each page returned:
+
+  1. Use `notion-fetch` with the page ID to get full content
+
+  2. Write as a markdown file using the Write tool
+
+
+  ## File naming
+
+  - `{YYYY-MM-DD} {Safe-Title}.md` where the date is TODAY''s date (the fetch date)
+
+  - Safe title: replace special chars with hyphens, collapse multiple hyphens, trim
+  trailing hyphens
+
+  - Example: `2026-02-19 Metacortex-Planning.md`
+
+
+  ## File template (follow EXACTLY)
+
+
+  ```
+
+  # {Page Title}
+
+
+  > Fetched: {YYYY-MM-DD} {HH}:{MM} via Notion MCP Sync
+
+  > Source: [Notion]({page_url})
+
+  > Last edited: {last_edited_time}
+
+
+  ---
+
+
+  ## Properties
+
+
+  {For each property with a value: `- **{key}:** {value}`}
+
+  {If no properties, leave this section empty}
+
+
+  ---
+
+
+  {Page content as returned by notion-fetch, already in markdown}
+
+  ```
+
+
+  ## Rules
+
+  - Overwrite existing files with the same name (latest version wins)
+
+  - Skip pages with no content AND no properties (empty pages)
+
+  - Maximum 10 pages per run
+
+  - Use the Write tool to save each file
+
+  - Ensure the output directory exists (mkdir -p) before writing
+
+  - If notion-fetch returns "(No content)", still include the page if it has properties
+
+  - Use 24h time format
+
+  '
+output:
+  path: Vault/1 - Inbox (Last 7 days)/Notion/{DATE} _marker.md
+  overwrite: true
+runner:
+  model: opus
+  timeout_sec: 600
+  unset_api_key: true
+  allowed_tools: Read,Write,Bash(mkdir *),mcp__claude_ai_Notion__*
+  permission_mode: bypassPermissions

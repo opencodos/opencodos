@@ -1,0 +1,87 @@
+name: Lint & Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-everything:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dev/frontend/package-lock.json
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix dev/frontend
+
+      - name: Install TypeScript dependencies
+        run: |
+          bun install --cwd ingestion --frozen-lockfile
+          bun install --cwd "skills/Scheduled Workflows" --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+  test-typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: cd ingestion/Granola && bun install
+
+      - name: Run TypeScript tests
+        run: bun test ingestion/lib/
+
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --project backend --extra test
+
+      - name: Create paths.json for tests
+        run: |
+          mkdir -p ~/.codos
+          echo '{"codos_path": "'"$GITHUB_WORKSPACE"'", "vault_path": "'"$GITHUB_WORKSPACE"'/test_vault"}' > ~/.codos/paths.json
+
+      - name: Run Python tests with coverage
+        run: |
+          uv run --project backend pytest tests/ \
+            --cov=backend \
+            --cov-report=term-missing
+
+      - name: Enforce per-component coverage thresholds
+        run: bash scripts/check-coverage.sh

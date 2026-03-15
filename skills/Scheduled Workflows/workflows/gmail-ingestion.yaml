@@ -1,0 +1,68 @@
+name: Gmail Ingestion
+description: Fetch recent Gmail via Gmail MCP and save to Vault
+schedule:
+  type: cron
+  cron: "0 8,14,20 * * *"
+context:
+  - type: text
+    title: Output Directory
+    text: |
+      Save the output file using the Write tool to this path:
+      {VAULT_PATH}/1 - Inbox (Last 7 days)/Gmail/
+prompt: |
+  You are a data ingestion worker. Fetch the last 8 hours of Gmail and save full email content as a markdown file.
+
+  ## Instructions
+  1. Use `ToolSearch` for "gmail" to discover available Gmail MCP tools
+  2. Use the Gmail search tool with query `newer_than:8h -in:spam -in:trash`
+  3. Parse the output to get thread list
+  4. For each thread, use the Gmail get_thread tool to get full content
+  5. Write ONE markdown file for today with full email bodies
+
+  ## Skip ONLY these (spam/automated noise)
+  - Senders containing: mailer-daemon@, calendar-notification@google.com
+  - Emails with no body and no subject (true empty messages)
+
+  Do NOT skip newsletters, notifications, receipts, or marketing — include everything except the above.
+
+  ## File format (follow EXACTLY)
+
+  ```
+  # Gmail — YYYY-MM-DD
+
+  > Fetched: YYYY-MM-DD HH:MM CET, last 8h
+  > N emails
+
+  ---
+
+  ## {Subject line}
+
+  **From:** {sender name} <{email}>
+  **To:** {recipients}
+  **Date:** YYYY-MM-DD HH:MM CET
+
+  {Full email body as plain text. If HTML-only, extract readable text.}
+
+  ---
+
+  ## {Next subject...}
+
+  ...
+  ```
+
+  ## Rules
+  - 24h time format, CET (Europe/Madrid)
+  - Newest emails first
+  - Include the FULL body of each email — do not truncate or summarize
+  - For threads with multiple messages, include all messages in chronological order under the same heading, separated by a blank line and "> Reply from {sender} at HH:MM:"
+  - If an email body is extremely long (>5000 chars), include the first 5000 chars and add "[truncated — full email too long]"
+  - If 0 emails found, still write the file with "No emails in last 8h"
+  - Use the Write tool to save the file
+output:
+  path: Vault/1 - Inbox (Last 7 days)/Gmail/{DATE}.md
+  overwrite: true
+runner:
+  model: opus
+  timeout_sec: 600
+  allowed_tools: "Read,Write,ToolSearch,mcp__claude_ai_Gmail__*"
+  permission_mode: bypassPermissions

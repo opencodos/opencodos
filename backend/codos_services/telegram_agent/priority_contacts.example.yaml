@@ -1,0 +1,22 @@
+# Priority contacts for daily summary
+# Tier 1: High priority (relationship 4-5 from CRM)
+# Tier 2: Medium priority (relationship 3 from CRM)
+# Names are matched semantically against Telegram display names
+#
+# Copy this file to priority_contacts.yaml and fill in your contacts.
+
+tier_1:
+  - Contact A
+  - Contact B
+  # Add your high-priority contacts here
+
+tier_2:
+  - Contact C
+  - Contact D
+  # Add your medium-priority contacts here
+
+# High priority group chats (always include regardless of activity)
+priority_groups: []
+  # Add group names here, e.g.:
+  # - Team Chat
+  # - Project Updates

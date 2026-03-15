@@ -1,0 +1,4 @@
+# Personal workflows (keep _template.yaml and standard ingestion configs)
+workflows/*.yaml
+!workflows/_template.yaml
+!workflows/*-ingestion.yaml

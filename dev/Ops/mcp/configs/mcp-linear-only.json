@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "composio-linear": {
+      "type": "http",
+      "url": "https://mcp.composio.dev/partner/composio/linear/mcp?customerId=${COMPOSIO_CUSTOMER_ID}&entityId=${COMPOSIO_ENTITY_ID}"
+    }
+  }
+}

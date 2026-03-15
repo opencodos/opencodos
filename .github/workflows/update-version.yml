@@ -1,0 +1,28 @@
+name: Update VERSION on tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extract version from tag
+        run: echo "${GITHUB_REF_NAME#v}" > VERSION
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet VERSION && exit 0
+          git add VERSION
+          git commit -m "chore: bump VERSION to ${GITHUB_REF_NAME#v}"
+          git push

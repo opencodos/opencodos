@@ -1,0 +1,65 @@
+name: Slack Ingestion
+description: Fetch recent Slack messages via Official Slack MCP and save to Vault
+schedule:
+  type: cron
+  cron: "0 8,14,20 * * *"
+context:
+  - type: text
+    title: Output Format
+    text: |
+      Save files to these directories using the Write tool:
+      - Channels: {VAULT_PATH}/1 - Inbox (Last 7 days)/Slack/Channels/
+      - DMs: {VAULT_PATH}/1 - Inbox (Last 7 days)/Slack/DMs/
+prompt: |
+  You are a data ingestion worker. Fetch the last 8 hours of Slack messages and save them as files.
+
+  ## How to fetch (follow EXACTLY — do NOT use other tools)
+
+  Use ONE tool: `slack_search_public_and_private`
+
+  1. Call `slack_search_public_and_private(query="after:{DATE}", sort="timestamp", sort_dir="desc", count=50)`
+     - {DATE} = today's date in YYYY-MM-DD format
+  2. If the response has a `next_cursor`, call again with `cursor=<next_cursor>` to get more results
+  3. Repeat until no more `next_cursor` or results are older than 8 hours
+  4. Group all messages by channel/DM name
+
+  DO NOT use `slack_search_channels` or `slack_read_channel`. The search already returns messages from all channels and DMs.
+
+  ## Writing files
+
+  For each channel/DM that has messages, write one markdown file:
+  - Channels: `{VAULT_PATH}/1 - Inbox (Last 7 days)/Slack/Channels/{YYYY-MM-DD} {channel-name}.md`
+  - DMs: `{VAULT_PATH}/1 - Inbox (Last 7 days)/Slack/DMs/{YYYY-MM-DD} {username}.md`
+
+  ## File template (follow EXACTLY)
+
+  # Slack #{channel-name} — {YYYY-MM-DD}
+
+  > Fetched: {YYYY-MM-DD} {HH}:{MM} GMT+1, last 8h
+
+  ## Messages
+
+  | Time | Sender | Message |
+  |------|--------|---------|
+  | {HH}:{MM} | {Name} | {text, max 300 chars, escape pipes} |
+
+  ## Summary
+
+  - {N} messages
+
+  ## Rules
+  - 24h time format, CET/GMT+1
+  - Oldest to newest
+  - Truncate at 300 chars, replace newlines with spaces, escape pipes as \|
+  - Skip channels/DMs with 0 messages
+  - Use display name for senders
+  - Write each file with the Write tool
+output:
+  path: Vault/1 - Inbox (Last 7 days)/Slack/Channels/{DATE} _marker.md
+  overwrite: true
+runner:
+  model: opus
+  timeout_sec: 600
+  unset_api_key: true
+  allowed_tools: "Read,Write,Bash(mkdir *),mcp__claude_ai_Slack__*"
+  permission_mode: bypassPermissions
