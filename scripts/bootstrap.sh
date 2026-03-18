@@ -82,8 +82,9 @@ ensure_api_key() {
   local key=""
 
   # Read existing key from secrets.json (canonical source)
+  # Use uv run — venv may not exist yet on first install
   if [ -f "$SECRETS_JSON" ]; then
-    key=$("$ROOT_DIR/backend/.venv/bin/python" -c "import json,sys; s=json.load(open('$SECRETS_JSON')); print(s.get('secrets',{}).get('ATLAS_API_KEY',''))" 2>/dev/null)
+    key=$(uv run python -c "import json,sys; s=json.load(open('$SECRETS_JSON')); print(s.get('secrets',{}).get('ATLAS_API_KEY',''))" 2>/dev/null)
   fi
 
   if [ -z "$key" ] && [ -f "$FRONTEND_ENV" ]; then
@@ -96,7 +97,7 @@ ensure_api_key() {
 
   # Write to secrets.json (where the backend's Settings reads from)
   mkdir -p "$(dirname "$SECRETS_JSON")"
-  "$ROOT_DIR/backend/.venv/bin/python" -c "
+  uv run python -c "
 import json, pathlib, os, tempfile
 p = pathlib.Path('$SECRETS_JSON')
 envelope = json.loads(p.read_text()) if p.exists() else {}
@@ -123,6 +124,7 @@ os.rename(tmp, str(p))
 INSTALL_DEPS=true
 START_SERVICES=false
 OPEN_BROWSER=true
+REMOTE_MODE=false
 
 show_help() {
   echo "Codos Setup Script"
@@ -132,13 +134,15 @@ show_help() {
   echo "Options:"
   echo "  --start       Install deps and start all services (first-time setup)"
   echo "  --quick       Skip dep installation, just start services (daily use)"
+  echo "  --remote      VPS mode: build frontend, install systemd services"
   echo "  --no-browser  Don't open browser automatically"
   echo "  --help        Show this help"
   echo ""
   echo "Examples:"
-  echo "  $0 --start       # First time: install everything + start"
-  echo "  $0 --quick       # Daily use: just start services"
-  echo "  $0              # Just install deps, don't start"
+  echo "  $0 --start           # First time: install everything + start"
+  echo "  $0 --quick           # Daily use: just start services"
+  echo "  $0 --start --remote  # VPS deployment via SSH tunnel"
+  echo "  $0                   # Just install deps, don't start"
 }
 
 for arg in "$@"; do
@@ -149,6 +153,10 @@ for arg in "$@"; do
     --quick)
       INSTALL_DEPS=false
       START_SERVICES=true
+      ;;
+    --remote)
+      REMOTE_MODE=true
+      OPEN_BROWSER=false
       ;;
     --no-browser)
       OPEN_BROWSER=false
@@ -273,11 +281,26 @@ wait_for_health() {
 repo_owner=$(stat -f%Su "$ROOT_DIR" 2>/dev/null || stat -c%U "$ROOT_DIR" 2>/dev/null)
 if [ "$repo_owner" != "$(whoami)" ]; then
   error "Repository owned by '$repo_owner', not '$(whoami)'"
-  echo "  Fix:  sudo chown -R $(whoami):staff \"$ROOT_DIR\""
+  echo "  Fix:  sudo chown -R $(whoami):$(id -gn) \"$ROOT_DIR\""
   exit 1
 fi
 
 info "Checking prerequisites..."
+
+# Ensure lsof is available (needed for port checks)
+if ! command -v lsof >/dev/null 2>&1; then
+  if [[ "$OSTYPE" == "linux"* ]]; then
+    if command -v apt-get >/dev/null 2>&1; then
+      info "Installing lsof..."
+      sudo apt-get install -y lsof 2>/dev/null || warn "Could not install lsof (port checks may fail)"
+    elif command -v yum >/dev/null 2>&1; then
+      info "Installing lsof..."
+      sudo yum install -y lsof 2>/dev/null || warn "Could not install lsof (port checks may fail)"
+    else
+      warn "lsof not found — port checks may fail. Install it manually."
+    fi
+  fi
+fi
 
 # Check/install Homebrew (macOS only)
 if [[ "$OSTYPE" == "darwin"* ]] && ! command -v brew >/dev/null 2>&1; then
@@ -308,9 +331,9 @@ if ! check_node_version; then
   NODE_VERSION=$(node --version 2>/dev/null || echo "not installed")
   warn "Node $NODE_VERSION is too old or not installed. Need 20.19+ or 22.12+"
 
-  if [ ! -t 0 ]; then
-    # Non-interactive (piped) mode — auto-accept
-    info "Non-interactive mode: installing Node 22 via nvm automatically..."
+  if [ ! -t 0 ] || [ "$REMOTE_MODE" = true ]; then
+    # Non-interactive or remote mode — auto-accept
+    info "Installing Node 22 via nvm automatically..."
     setup_node_via_nvm
   else
     read -p "Install Node 22 via nvm? [Y/n] " -n 1 -r
@@ -334,6 +357,16 @@ if ! command -v bun >/dev/null 2>&1; then
     export BUN_INSTALL="$HOME/.bun"
     export PATH="$BUN_INSTALL/bin:$PATH"
   else
+    # Bun installer requires unzip
+    if ! command -v unzip >/dev/null 2>&1; then
+      if command -v apt-get >/dev/null 2>&1; then
+        info "Installing unzip (required by Bun installer)..."
+        sudo apt-get install -y unzip
+      elif command -v yum >/dev/null 2>&1; then
+        info "Installing unzip (required by Bun installer)..."
+        sudo yum install -y unzip
+      fi
+    fi
     info "Installing Bun (required for sync scripts)..."
     curl -fsSL https://bun.sh/install | bash
     export BUN_INSTALL="$HOME/.bun"
@@ -372,7 +405,7 @@ if [ "$INSTALL_DEPS" = true ]; then
 
   info "Installing frontend deps..."
   cd "$FRONTEND_DIR"
-  npm install
+  bun install
 
   info "Dependencies installed!"
 
@@ -391,17 +424,8 @@ fi
 
 # ==================== Start Services ====================
 
-if [ "$START_SERVICES" = true ]; then
-  info "Starting services..."
-
-  # Clean up ports first
-  echo "  Cleaning up ports..."
-  kill_port 8767
-  kill_port 8768
-  kill_port 5174
-
-  # Seed paths.json so the backend can import during cold start.
-  # The setup wizard overwrites this with the user's actual choices.
+# ── Start: shared setup ────────────────────────────────────────────────────
+seed_paths_json() {
   PATHS_JSON="$HOME/.codos/paths.json"
   if [ ! -f "$PATHS_JSON" ]; then
     mkdir -p "$HOME/.codos"
@@ -413,7 +437,53 @@ if [ "$START_SERVICES" = true ]; then
 SEED
     info "Seeded $PATHS_JSON (will be updated by setup wizard)"
   fi
+}
 
+# ── Start: remote / VPS mode ──────────────────────────────────────────────
+start_remote() {
+  # Build frontend (served by gateway as static files)
+  info "Building frontend for remote mode..."
+  cd "$FRONTEND_DIR"
+  bun run build
+
+  # Install systemd services instead of background processes
+  info "Installing systemd services..."
+  bash "$ROOT_DIR/scripts/codos" install-service
+
+  # Wait for gateway to come up
+  echo "  Checking services..."
+  wait_for_health "http://127.0.0.1:8767/health" "Gateway" || {
+    error "Gateway failed to start. Check: journalctl --user -u codos-gateway"
+    exit 1
+  }
+  wait_for_health "http://127.0.0.1:8768/telegram/auth/status" "Telegram agent" || {
+    warn "Telegram agent not responding (continuing anyway)"
+  }
+
+  # Detect server IP for SSH instructions
+  # Prefer public IP via external lookup; fall back to placeholder
+  SERVER_IP=$(curl -4 -s --max-time 3 https://ifconfig.me 2>/dev/null || echo "<your-server-ip>")
+
+  echo ""
+  info "Codos is running on this server!"
+  echo ""
+  echo "    Gateway:        http://127.0.0.1:8767 (API + frontend)"
+  echo "    Telegram agent: http://127.0.0.1:8768"
+  echo ""
+  echo "    Logs: journalctl --user -u codos-gateway -f"
+  echo ""
+  echo "  To access from your local machine, open an SSH tunnel:"
+  echo ""
+  echo "    ssh -L 8767:localhost:8767 $(whoami)@${SERVER_IP}"
+  echo ""
+  echo "  Then open: http://localhost:8767"
+  echo ""
+  echo "  Services will keep running after you disconnect."
+  echo "  To stop:  codos stop"
+}
+
+# ── Start: local / desktop mode ───────────────────────────────────────────
+start_local() {
   # Start backend (python -m backend <subcommand> from src/ directory)
   echo "  Starting backend (port 8767)..."
   cd "$ROOT_DIR"
@@ -429,7 +499,7 @@ SEED
   # Start frontend
   echo "  Starting frontend (port 5174)..."
   cd "$FRONTEND_DIR"
-  npm run dev -- --host 127.0.0.1 --port 5174 > "$LOG_DIR/codos-frontend.log" 2>&1 &
+  bun run dev -- --host 127.0.0.1 --port 5174 > "$LOG_DIR/codos-frontend.log" 2>&1 &
   FRONTEND_PID=$!
 
   # Trap Ctrl+C to clean up
@@ -484,4 +554,24 @@ SEED
 
   echo "Press Ctrl+C to stop all services..."
   wait
+}
+
+# ==================== Start Services ====================
+
+if [ "$START_SERVICES" = true ]; then
+  info "Starting services..."
+
+  # Clean up ports first
+  echo "  Cleaning up ports..."
+  kill_port 8767
+  kill_port 8768
+  kill_port 5174
+
+  seed_paths_json
+
+  if [ "$REMOTE_MODE" = true ]; then
+    start_remote
+  else
+    start_local
+  fi
 fi

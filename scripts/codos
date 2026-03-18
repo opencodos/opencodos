@@ -32,22 +32,39 @@ is_running() {
 # ── Commands ────────────────────────────────────────────────────────────────
 cmd_start() {
   local full=false
+  local remote=false
   for arg in "$@"; do
     case "$arg" in
       --full) full=true ;;
+      --remote) remote=true ;;
     esac
   done
 
+  local extra_args=""
+  if [ "$remote" = true ]; then
+    extra_args="$extra_args --remote"
+  fi
+
   if [ "$full" = true ] || [ ! -d "$CODOS_DIR/backend/.venv" ]; then
     info "Starting Codos (full setup)..."
-    exec bash "$BOOTSTRAP" --start
+    exec bash "$BOOTSTRAP" --start $extra_args
   else
     info "Starting Codos..."
-    exec bash "$BOOTSTRAP" --quick
+    exec bash "$BOOTSTRAP" --quick $extra_args
   fi
 }
 
 cmd_stop() {
+  # If systemd services are installed, stop those instead
+  if systemctl --user is-active codos-gateway >/dev/null 2>&1 || \
+     systemctl --user is-active codos-telegram-agent >/dev/null 2>&1; then
+    info "Stopping systemd services..."
+    systemctl --user stop codos-gateway codos-telegram-agent 2>/dev/null || true
+    systemctl --user disable codos-gateway codos-telegram-agent 2>/dev/null || true
+    info "Systemd services stopped and disabled."
+    return
+  fi
+
   info "Stopping Codos services..."
   local found=false
   for port in $PORTS; do
@@ -64,6 +81,72 @@ cmd_stop() {
   else
     info "No running services found."
   fi
+}
+
+cmd_install_service() {
+  local SYSTEMD_DIR="$HOME/.config/systemd/user"
+  mkdir -p "$SYSTEMD_DIR"
+
+  info "Generating systemd unit files..."
+
+  cat > "$SYSTEMD_DIR/codos-gateway.service" <<EOF
+[Unit]
+Description=Codos Gateway
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$CODOS_DIR
+ExecStart=$CODOS_DIR/backend/.venv/bin/python -m backend gateway
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+  cat > "$SYSTEMD_DIR/codos-telegram-agent.service" <<EOF
+[Unit]
+Description=Codos Telegram Agent
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$CODOS_DIR
+ExecStart=$CODOS_DIR/backend/.venv/bin/python -m backend telegram-agent server
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+  info "Enabling and starting services..."
+  systemctl --user daemon-reload
+  systemctl --user enable --now codos-gateway codos-telegram-agent
+
+  # Enable lingering so services survive logout
+  if loginctl enable-linger "$(whoami)" 2>/dev/null; then
+    info "Lingering enabled (services will survive logout)."
+  else
+    warn "Could not enable lingering (loginctl unavailable or permission denied)."
+    warn "Services may stop when you disconnect. To fix, run:"
+    echo "    sudo loginctl enable-linger $(whoami)"
+  fi
+
+  info "Systemd services installed and running."
+  echo "    codos-gateway:        $(systemctl --user is-active codos-gateway)"
+  echo "    codos-telegram-agent: $(systemctl --user is-active codos-telegram-agent)"
+}
+
+cmd_uninstall_service() {
+  info "Removing systemd services..."
+  systemctl --user stop codos-gateway codos-telegram-agent 2>/dev/null || true
+  systemctl --user disable codos-gateway codos-telegram-agent 2>/dev/null || true
+  rm -f "$HOME/.config/systemd/user/codos-gateway.service"
+  rm -f "$HOME/.config/systemd/user/codos-telegram-agent.service"
+  systemctl --user daemon-reload
+  info "Systemd services removed."
 }
 
 cmd_update() {
@@ -95,10 +178,27 @@ cmd_update() {
 
   # Re-run full bootstrap to pick up any new deps
   info "Reinstalling dependencies..."
-  exec bash "$BOOTSTRAP" --start
+  if [ -f "$HOME/.config/systemd/user/codos-gateway.service" ]; then
+    exec bash "$BOOTSTRAP" --start --remote
+  else
+    exec bash "$BOOTSTRAP" --start
+  fi
 }
 
 cmd_status() {
+  # Check if systemd services are installed
+  if [ -f "$HOME/.config/systemd/user/codos-gateway.service" ]; then
+    echo "Codos services (systemd):"
+    for svc in codos-gateway codos-telegram-agent; do
+      if systemctl --user is-active "$svc" >/dev/null 2>&1; then
+        echo -e "  ${GREEN}●${NC} $svc (active)"
+      else
+        echo -e "  ${RED}●${NC} $svc (inactive)"
+      fi
+    done
+    return
+  fi
+
   echo "Codos services:"
   for port in $PORTS; do
     local name
@@ -122,18 +222,22 @@ Codos — AI Operating System for Work
 Usage: codos [command] [options]
 
 Commands:
-  start          Start services (default)
-  start --full   Full setup: reinstall all dependencies
-  stop           Stop all services
-  update         Download latest version and restart
-  status         Check if services are running
-  help           Show this help
+  start              Start services (default)
+  start --full       Full setup: reinstall all dependencies
+  start --remote     VPS mode: build frontend, use systemd
+  stop               Stop all services
+  update             Download latest version and restart
+  status             Check if services are running
+  install-service    Install systemd user services (Linux VPS)
+  uninstall-service  Remove systemd user services
+  help               Show this help
 
 Examples:
-  codos              Start services (quick mode)
-  codos start --full First-time or full reinstall
-  codos update       Pull latest + restart
-  codos stop         Stop everything
+  codos                    Start services (quick mode)
+  codos start --full       First-time or full reinstall
+  codos start --remote     Deploy on Linux VPS via SSH tunnel
+  codos update             Pull latest + restart
+  codos stop               Stop everything
 EOF
 }
 
@@ -146,6 +250,8 @@ case "$COMMAND" in
   stop)    cmd_stop ;;
   update)  cmd_update ;;
   status)  cmd_status ;;
+  install-service)   cmd_install_service ;;
+  uninstall-service) cmd_uninstall_service ;;
   help|--help|-h) cmd_help ;;
   *)
     error "Unknown command: $COMMAND"

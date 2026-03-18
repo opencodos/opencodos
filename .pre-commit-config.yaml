@@ -8,6 +8,22 @@ exclude: >-
   )
 
 repos:
+  - repo: local
+    hooks:
+      - id: frontend-deps
+        name: _deps:frontend
+        entry: bash -c 'cd dev/frontend && bun install --frozen-lockfile --silent'
+        language: system
+        files: ^dev/frontend/
+        pass_filenames: false
+
+      - id: backend-deps
+        name: _deps:backend
+        entry: bash -c 'uv sync --project backend --extra dev --quiet && uv run --project backend python -c "import telethon; open(telethon.__path__[0]+\"/py.typed\",\"a\").close()"'
+        language: system
+        pass_filenames: false
+        types: [python]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -44,14 +60,14 @@ repos:
     hooks:
       - id: frontend-eslint
         name: frontend:ESLint
-        entry: npm --prefix dev/frontend run lint
+        entry: bash -c 'cd dev/frontend && bun run lint'
         language: system
         files: ^dev/frontend/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
 
       - id: frontend-tsc
         name: frontend:tsc
-        entry: bash -c 'cd dev/frontend && npx tsc -b'
+        entry: bash -c 'cd dev/frontend && bunx tsc -b'
         language: system
         files: ^dev/frontend/.*\.(ts|tsx)$
         pass_filenames: false
@@ -60,26 +76,22 @@ repos:
     hooks:
       - id: import-linter
         name: backend:importlinter
-        entry: bash -c 'uv sync --project backend --extra dev --quiet && uv run --project backend lint-imports --config backend/pyproject.toml'
+        entry: bash -c 'uv run --project backend lint-imports --config backend/pyproject.toml'
         language: system
         pass_filenames: false
         types: [python]
 
-  - repo: local
-    hooks:
       - id: mypy
         name: backend:mypy
-        entry: bash -c 'uv sync --project backend --extra dev --quiet && uv run --project backend python -c "import telethon; open(telethon.__path__[0]+\"/py.typed\",\"a\").close()" && uv run --project backend mypy --config-file backend/pyproject.toml backend/'
+        entry: bash -c 'uv run --project backend mypy --config-file backend/pyproject.toml backend/'
         language: system
         types: [python]
         pass_filenames: false
         exclude: ^tests/
 
-  - repo: local
-    hooks:
       - id: pyright
         name: backend:pyright
-        entry: bash -c 'uv sync --project backend --extra dev --quiet && uv run --project backend python -c "import telethon; open(telethon.__path__[0]+\"/py.typed\",\"a\").close()" && uv run --project backend pyright backend/'
+        entry: bash -c 'uv run --project backend pyright backend/'
         language: system
         types: [python]
         pass_filenames: false
@@ -122,7 +134,7 @@ repos:
         pass_filenames: false
 
   # TODO: implement these
-  #   - Install prettier in dev/frontend (npm i -D prettier)
+  #   - Install prettier in dev/frontend (bun add -D prettier)
   #   - Add format:check script to dev/frontend/package.json
   #   - Hook:
   #     - id: frontend-prettier

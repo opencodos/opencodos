@@ -22,9 +22,34 @@ AI Operating System for digital workers. Aggregates context from your data sourc
 curl -fsSL https://raw.githubusercontent.com/opencodos/opencodos/main/scripts/install.sh | bash
 ```
 
-To start it again
+To start it again:
 ```bash
 codos start
+```
+
+### VPS Deployment (supported: Ubuntu/Debian, RHEL/CentOS)
+
+Deploy on a remote server and access via SSH tunnel:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/opencodos/opencodos/main/scripts/install.sh | bash -s -- --remote
+```
+
+This builds the frontend, installs systemd services, and enables lingering (services survive logout).
+
+From your local machine, open an SSH tunnel:
+```bash
+ssh -L 8767:localhost:8767 user@your-server-ip
+```
+
+Then open `http://localhost:8767` in your browser.
+
+Manage services:
+```bash
+codos status              # Check service status
+codos stop                # Stop and disable services
+codos install-service     # Reinstall systemd services
+codos uninstall-service   # Remove systemd services
 ```
 
 ## License

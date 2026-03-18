@@ -71,6 +71,14 @@ esac
 # Ensure PATH is available in this session
 export PATH="$BIN_DIR:$PATH"
 
+# ── Parse flags for passthrough ────────────────────────────────────────────
+EXTRA_FLAGS=""
+for arg in "$@"; do
+  case "$arg" in
+    --remote) EXTRA_FLAGS="$EXTRA_FLAGS --remote" ;;
+  esac
+done
+
 # ── Kick off bootstrap ──────────────────────────────────────────────────────
 info "Starting Codos setup..."
 echo ""
@@ -79,4 +87,4 @@ rm -f "$TMP_TAR"
 printf "\n${BOLD}  To use 'codos' in a new terminal, restart your shell or run:${NC}\n"
 printf "    export PATH=\"\$HOME/.local/bin:\$PATH\"\n\n"
 
-exec bash "$CODOS_DIR/scripts/codos" start --full
+exec bash "$CODOS_DIR/scripts/codos" start --full $EXTRA_FLAGS

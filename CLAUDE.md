@@ -32,6 +32,12 @@ To start services, run:
 (Use --quick to skip dependency installation for faster startup)
 ```
 
+**For VPS / remote server deployment**, use `--remote`:
+```
+curl -fsSL https://raw.githubusercontent.com/opencodos/opencodos/main/scripts/install.sh | bash -s -- --remote
+```
+This builds the frontend (served by gateway), installs systemd services, and prints SSH tunnel instructions. Only port 8767 is needed.
+
 ---
 
 ## CRITICAL — BEFORE YOUR FIRST RESPONSE
