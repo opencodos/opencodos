@@ -127,6 +127,12 @@ class Settings(BaseSettings):
         raise DependencyNotInstalledException("bun not found. Install with: curl -fsSL https://bun.sh/install | bash")
 
     @property
+    def frontend_dist_dir(self) -> Path | None:
+        """Return path to built frontend dist if it exists, else None."""
+        dist = self.get_codos_path() / "dev" / "frontend" / "dist"
+        return dist if dist.is_dir() else None
+
+    @property
     def telegram_agent_url(self) -> str:
         return f"http://localhost:{self.telegram_agent_port}"
 

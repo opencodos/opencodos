@@ -17,6 +17,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from pydantic import BaseModel
 
@@ -566,6 +567,12 @@ async def proxy_telegram(path: str, request: Request):
             }
         )
         raise HTTPException(status_code=502, detail="Telegram proxy error") from e
+
+
+# Serve built frontend (remote/VPS mode) — must be after all route definitions
+_dist_dir = settings.frontend_dist_dir
+if _dist_dir:
+    app.mount("/", StaticFiles(directory=str(_dist_dir), html=True), name="frontend")
 
 
 def run_server():

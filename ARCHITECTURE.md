@@ -37,7 +37,9 @@ Test paths should mirror source file paths with prefix `tests/`. For example, te
 
 ### Distribution mode
 
-Users are expected to install Codos from source by running the bootstrap script.
+Users are expected to install Codos from source by running the bootstrap script. They do this either locally or on private VPS.
+
+Supported OS: MacOS, Linux/Debian, RHEL/CentOS
 
 There are other installation modes planned, but supporting them is currently no-goal.
 
@@ -54,6 +56,7 @@ The application is called Codos. Early development version was called Atlas - th
 All parts of the code should use same tools to solve same problems:
 
 - `uv` for back-end package management
+- `bun` for front-end and TypeScript package management (not npm/yarn/pnpm)
 - `FastAPI` for back-end services
 
 ---
