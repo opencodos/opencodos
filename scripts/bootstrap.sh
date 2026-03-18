@@ -277,6 +277,47 @@ wait_for_health() {
 
 # ==================== Prerequisites Check ====================
 
+# Claude Code cannot run as root — create a codos user and re-exec
+if [ "$(id -u)" = "0" ]; then
+  CODOS_USER="codos"
+
+  # Install system packages while we still have root
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update -qq
+    apt-get install -y lsof unzip curl git >/dev/null 2>&1 || true
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y lsof unzip curl git >/dev/null 2>&1 || true
+  fi
+
+  # Create user if needed
+  if ! id "$CODOS_USER" >/dev/null 2>&1; then
+    info "Creating user '$CODOS_USER' (Claude Code cannot run as root)..."
+    CODOS_PASS=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)
+    useradd -m -s /bin/bash "$CODOS_USER"
+    echo "$CODOS_USER:$CODOS_PASS" | chpasswd
+    echo "$CODOS_USER ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$CODOS_USER"
+    chmod 440 "/etc/sudoers.d/$CODOS_USER"
+
+    # Save password so SSH instructions can display it later
+    mkdir -p "/home/$CODOS_USER/.codos"
+    echo "$CODOS_PASS" > "/home/$CODOS_USER/.codos/.initial_password"
+    chmod 600 "/home/$CODOS_USER/.codos/.initial_password"
+    chown -R "$CODOS_USER:$CODOS_USER" "/home/$CODOS_USER/.codos"
+  fi
+
+  # Copy repo to codos user's home
+  CODOS_HOME="/home/$CODOS_USER"
+  if [ "$ROOT_DIR" != "$CODOS_HOME/codos" ]; then
+    info "Copying install to $CODOS_HOME/codos..."
+    rm -rf "$CODOS_HOME/codos"
+    cp -R "$ROOT_DIR" "$CODOS_HOME/codos"
+  fi
+  chown -R "$CODOS_USER:$CODOS_USER" "$CODOS_HOME/codos"
+
+  info "Re-running as '$CODOS_USER'..."
+  exec sudo -u "$CODOS_USER" bash "$CODOS_HOME/codos/scripts/bootstrap.sh" "$@"
+fi
+
 # Verify file ownership — archive extracts may be owned by a different user
 repo_owner=$(stat -f%Su "$ROOT_DIR" 2>/dev/null || stat -c%U "$ROOT_DIR" 2>/dev/null)
 if [ "$repo_owner" != "$(whoami)" ]; then
@@ -292,7 +333,7 @@ if ! command -v lsof >/dev/null 2>&1; then
   if [[ "$OSTYPE" == "linux"* ]]; then
     if command -v apt-get >/dev/null 2>&1; then
       info "Installing lsof..."
-      sudo apt-get install -y lsof 2>/dev/null || warn "Could not install lsof (port checks may fail)"
+      (sudo apt-get update -qq && sudo apt-get install -y lsof) 2>/dev/null || warn "Could not install lsof (port checks may fail)"
     elif command -v yum >/dev/null 2>&1; then
       info "Installing lsof..."
       sudo yum install -y lsof 2>/dev/null || warn "Could not install lsof (port checks may fail)"
@@ -361,7 +402,7 @@ if ! command -v bun >/dev/null 2>&1; then
     if ! command -v unzip >/dev/null 2>&1; then
       if command -v apt-get >/dev/null 2>&1; then
         info "Installing unzip (required by Bun installer)..."
-        sudo apt-get install -y unzip
+        sudo apt-get update -qq && sudo apt-get install -y unzip
       elif command -v yum >/dev/null 2>&1; then
         info "Installing unzip (required by Bun installer)..."
         sudo yum install -y unzip
@@ -475,6 +516,10 @@ start_remote() {
   echo "  To access from your local machine, open an SSH tunnel:"
   echo ""
   echo "    ssh -L 8767:localhost:8767 $(whoami)@${SERVER_IP}"
+  # Show password if this user was auto-created
+  if [ -f "$HOME/.codos/.initial_password" ]; then
+    echo "    Password: $(cat "$HOME/.codos/.initial_password")"
+  fi
   echo ""
   echo "  Then open: http://localhost:8767"
   echo ""
