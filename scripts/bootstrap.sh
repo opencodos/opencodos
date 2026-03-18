@@ -305,6 +305,13 @@ if [ "$(id -u)" = "0" ]; then
     chown -R "$CODOS_USER:$CODOS_USER" "/home/$CODOS_USER/.codos"
   fi
 
+  # Enable lingering as root so the user gets a systemd session
+  CODOS_UID=$(id -u "$CODOS_USER")
+  loginctl enable-linger "$CODOS_USER" 2>/dev/null || true
+  # Ensure the runtime dir exists for systemctl --user
+  mkdir -p "/run/user/$CODOS_UID"
+  chown "$CODOS_USER:$CODOS_USER" "/run/user/$CODOS_UID"
+
   # Copy repo to codos user's home
   CODOS_HOME="/home/$CODOS_USER"
   if [ "$ROOT_DIR" != "$CODOS_HOME/codos" ]; then
