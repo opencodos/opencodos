@@ -315,6 +315,7 @@ if [ "$(id -u)" = "0" ]; then
   chown -R "$CODOS_USER:$CODOS_USER" "$CODOS_HOME/codos"
 
   info "Re-running as '$CODOS_USER'..."
+  cd "$CODOS_HOME"
   exec sudo -u "$CODOS_USER" -H bash "$CODOS_HOME/codos/scripts/bootstrap.sh" "$@"
 fi
 
