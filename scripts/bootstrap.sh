@@ -315,7 +315,7 @@ if [ "$(id -u)" = "0" ]; then
   chown -R "$CODOS_USER:$CODOS_USER" "$CODOS_HOME/codos"
 
   info "Re-running as '$CODOS_USER'..."
-  exec sudo -u "$CODOS_USER" bash "$CODOS_HOME/codos/scripts/bootstrap.sh" "$@"
+  exec sudo -u "$CODOS_USER" -H bash "$CODOS_HOME/codos/scripts/bootstrap.sh" "$@"
 fi
 
 # Verify file ownership — archive extracts may be owned by a different user
