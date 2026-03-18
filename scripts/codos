@@ -97,6 +97,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$CODOS_DIR
+Environment=PATH=$PATH
 ExecStart=$CODOS_DIR/backend/.venv/bin/python -m backend gateway
 Restart=on-failure
 RestartSec=5
@@ -113,6 +114,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$CODOS_DIR
+Environment=PATH=$PATH
 ExecStart=$CODOS_DIR/backend/.venv/bin/python -m backend telegram-agent server
 Restart=on-failure
 RestartSec=5
