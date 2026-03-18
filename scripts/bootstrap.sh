@@ -323,7 +323,7 @@ if [ "$(id -u)" = "0" ]; then
 
   info "Re-running as '$CODOS_USER'..."
   cd "$CODOS_HOME"
-  exec sudo -u "$CODOS_USER" -H bash "$CODOS_HOME/codos/scripts/bootstrap.sh" "$@"
+  exec sudo -u "$CODOS_USER" -H XDG_RUNTIME_DIR="/run/user/$CODOS_UID" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$CODOS_UID/bus" bash "$CODOS_HOME/codos/scripts/bootstrap.sh" "$@"
 fi
 
 # Verify file ownership — archive extracts may be owned by a different user
