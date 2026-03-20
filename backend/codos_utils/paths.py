@@ -18,6 +18,7 @@ SECRETS_FILE = CODOS_CONFIG_DIR / "secrets.json"
 SESSIONS_DIR = CODOS_CONFIG_DIR / "sessions"
 DB_PATH = CODOS_CONFIG_DIR / "sessions.db"
 LOGS_ROOT = CODOS_CONFIG_DIR / "logs"
+SYNC_LOGS_DIR = LOGS_ROOT / "sync"
 
 
 class CodosPaths(BaseModel):

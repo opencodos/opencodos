@@ -584,8 +584,8 @@ if (import.meta.main) {
   extractGranolaCalls()
     .then(result => {
       if (result.errors.length > 0) {
-        console.error('\n⚠️ Errors:');
-        result.errors.forEach(err => console.error(`  - ${err}`));
+        // First line must be parseable by connector_sync error extraction
+        result.errors.forEach(err => console.error(`Error: ${err}`));
       }
       process.exit(result.errors.length > 0 ? 1 : 0);
     })
