@@ -14,6 +14,7 @@ from loguru import logger
 from backend.codos_models.connector_commands import CONNECTOR_COMMANDS, Runtime
 from backend.codos_models.exceptions import DependencyNotInstalledException
 from backend.codos_models.settings import CODOS_CONFIG_DIR, settings
+from backend.codos_utils.paths import SYNC_LOGS_DIR
 from backend.codos_utils.secrets import get_secrets_backend
 
 _sync_tasks: dict[str, dict] = {}
@@ -97,6 +98,30 @@ def create_sync_task(connectors: list[str]) -> tuple[str, dict]:
     return task_id, task
 
 
+def _write_sync_log(connector: str, task_id: str, returncode: int | None, stdout: bytes, stderr: bytes) -> None:
+    """Write full stdout/stderr from a sync run to ~/.codos/logs/sync/."""
+    try:
+        connector_dir = SYNC_LOGS_DIR / connector
+        connector_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        log_path = connector_dir / f"{ts}_{task_id[:8]}.log"
+        parts = [
+            f"connector: {connector}",
+            f"task_id:   {task_id}",
+            f"time:      {datetime.utcnow().isoformat()}",
+            f"exit_code: {returncode}",
+            "",
+            "=== STDOUT ===",
+            stdout.decode(errors="replace") if stdout else "(empty)",
+            "",
+            "=== STDERR ===",
+            stderr.decode(errors="replace") if stderr else "(empty)",
+        ]
+        log_path.write_text("\n".join(parts))
+    except Exception:
+        logger.warning("Failed to write sync log for {}", connector)
+
+
 async def run_connector_sync(
     connector: str,
     task: dict,
@@ -168,6 +193,7 @@ async def run_connector_sync(
 
             try:
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=config["timeout"])
+                _write_sync_log(connector, task.get("task_id", "unknown"), proc.returncode, stdout, stderr)
 
                 if proc.returncode == 0:
                     task["connectors"][status_key] = {
