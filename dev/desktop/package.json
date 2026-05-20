@@ -18,7 +18,7 @@
     "build:macos:debug": "npm run sync-version && npm run preflight:macos && PATH=\"$HOME/.cargo/bin:$PATH\" tauri build --debug"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.10.1"
+    "@tauri-apps/cli": "^2.11.2"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.76"
